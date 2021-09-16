@@ -13,6 +13,10 @@ from src.db.security import encrypt_password
 
 
 class BaseRepo:
+    """
+    Database abstraction layer
+    """
+
     model: Type[BaseModel]
 
     def __init__(self, session: Session) -> None:
@@ -21,29 +25,61 @@ class BaseRepo:
     def get(
         self, default: Optional[str] = None, **kwargs
     ) -> Union[BaseModel, NoReturn]:
+        """
+        Get row from table or raise exception
+
+        :param default: Specific field for lookup
+        :param kwargs: Arguments for search
+        :return: self.model type object
+        """
         check_args = kwargs
         if default is not None:
             check_args = {default: kwargs[default]}
         return self.session.query(self.model).filter_by(**check_args).one()
 
     def create(self, instance: Optional[BaseModel] = None, **kwargs) -> BaseModel:
+        """
+        Create instance in the table
+
+        :param instance: Instance of self.model type
+        :param kwargs: Arguments for create instance
+        :return: self.model type object
+        """
         if instance is None:
             instance = self.model(**kwargs)
-
         self.session.add(instance)
         self.session.commit()
         return instance
 
     def update(self, instance: BaseModel, values: Dict[str, Any]) -> BaseModel:
+        """
+        Update instance in the table
+
+        :param instance: Instance of self.model type
+        :param values: Arguments for update instance
+        :return: self.model type object
+        """
         for key, item in values.items():
             setattr(instance, key, item)
         self.session.commit()
         return instance
 
     def list(self) -> List[BaseModel]:
+        """
+        Get all list of instances from table
+
+        :return: List of table records
+        """
         return self.session.query(self.model).all()
 
     def get_or_create(self, default: Optional[str] = None, **kwargs) -> BaseModel:
+        """
+        Get or create instance from/in table
+
+        :param default: Specific lookup field
+        :param kwargs: Arguments for create instance
+        :return: self.model type object
+        """
         try:
             instance = self.get(default=default, **kwargs)
         except NoResultFound:
@@ -56,6 +92,14 @@ class BaseRepo:
         default: Optional[str] = None,
         **kwargs
     ) -> BaseModel:
+        """
+        Update or create record in/to table
+
+        :param default: Specific lookup field
+        :param instance: self.model type object
+        :param kwargs: Values for create or update
+        :return: self.model type object
+        """
         if instance is None:
             instance = self.get(default=default, **kwargs)
 
@@ -64,13 +108,29 @@ class BaseRepo:
             return instance
         return self.update(instance=instance, values=kwargs)
 
-    def truncate(self):
+    def truncate(self) -> None:
+        """Delete all data from table"""
         self.session.query(self.model).delete()
         self.session.commit()
 
 
 class TelegramUserRepo(BaseRepo):
     model = TelegramUser
+
+    def get_mcs_oidc_credentials(
+        self,
+        instance: Optional[TelegramUser] = None,
+        default: Optional[str] = None,
+        **kwargs
+    ) -> Optional[MicrosoftOIDCCredentials]:
+        if instance is None:
+            instance = self.get(default=default, **kwargs)
+        credentials = instance.microsoft_oidc_credentials
+        return credentials[0] if len(credentials) else None
+
+
+class TelegramUserMoodleSessionRepo(BaseRepo):
+    model = TelegramUserMoodleSession
 
 
 class MicrosoftOIDCCredentialsRepo(BaseRepo):
@@ -85,7 +145,3 @@ class MicrosoftOIDCCredentialsRepo(BaseRepo):
         else:
             instance.password = encrypt_password(instance.password.encode())
         return super().create(instance=instance)
-
-
-class TelegramUserMoodleSessionRepo(BaseRepo):
-    model = TelegramUserMoodleSession
