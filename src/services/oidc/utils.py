@@ -3,6 +3,7 @@ import time
 
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
+    ElementNotInteractableException,
     NoSuchElementException,
     StaleElementReferenceException,
     TimeoutException,
@@ -38,37 +39,51 @@ def is_clickable(driver):
     return True
 
 
-def wait_load_of_element(driver, delay, attr, name):
+def wait_load_of_element(driver, delay, attr, name, attempt=0):
     try:
         WebDriverWait(driver, delay).until(
             expected_conditions.presence_of_element_located((attr, name))
         )
     except (StaleElementReferenceException, TimeoutException):
-        logger.warning("FAIL")
+        if attempt == 3:
+            return Exception("element is not loaded after 3 attempts")
+        attempt += 1
         wait_load_of_element(driver, delay, attr, name)
 
 
-def wait_is_active(driver, delay, check_func):
+def wait_is_active(driver, delay, check_func, attempt=0):
     try:
         WebDriverWait(driver, delay).until(check_func)
     except (StaleElementReferenceException, TimeoutException):
-        logger.warning("FAIL")
-        wait_is_active(driver, delay, check_func)
+        if attempt == 20:
+            return Exception("element is not loaded after 20 attempts")
+        attempt += 1
+        wait_is_active(driver, delay, check_func, attempt)
 
 
-def wait_is_clickable_submit_btn(driver, delay):
+def wait_is_clickable_submit_btn(driver, delay, attempt=0):
     try:
         WebDriverWait(driver, delay).until(
             expected_conditions.element_to_be_clickable((By.ID, "idSIButton9"))
         )
     except (StaleElementReferenceException, TimeoutException):
-        logger.warning("FAIL")
-        wait_is_clickable_submit_btn(driver, delay)
+        if attempt == 20:
+            return Exception("element is not loaded after 3 attempts")
+        attempt += 1
+        wait_is_clickable_submit_btn(driver, delay, attempt)
 
 
-def click_on_btn(driver, delay, _id):
+def click_on_btn(driver, delay, _id, attempt=0):
     try:
         driver.find_element_by_id(_id).click()
-    except (StaleElementReferenceException, ElementClickInterceptedException):
+    except (
+        ElementNotInteractableException,
+        StaleElementReferenceException,
+        ElementClickInterceptedException,
+        NoSuchElementException,
+    ):
         time.sleep(3)
-        click_on_btn(driver, delay, _id)
+        if attempt == 20:
+            return Exception("element is not loaded after 20 attempts")
+        attempt += 1
+        click_on_btn(driver, delay, _id, attempt)

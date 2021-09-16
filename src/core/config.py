@@ -5,8 +5,6 @@ ENV = config("ENV", cast=str)
 
 # Microsoft references
 MICROSOFT_OIDC_URL = config("MICROSOFT_OIDC_URL", cast=str)
-MICROSOFT_OIDC_EMAIL = config("MICROSOFT_OIDC_EMAIL", cast=str)
-MICROSOFT_OIDC_PWD = config("MICROSOFT_OIDC_PWD", cast=str)
 
 # Database configs
 DATABASE_URL = config("DATABASE_URL", cast=str)
